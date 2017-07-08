@@ -4,9 +4,41 @@ use 5.006;
 use strict;
 use warnings;
 
+use parent 'Exporter';
+
+use Scalar::Util qw(blessed looks_like_number);
+use Carp qw(croak);
+
+our @EXPORT_OK = qw(
+  validate
+  Any
+  Bool
+  Maybe
+  Undef
+  Defined
+  Value
+  Str
+  Alpha
+  Alnum
+  Ascii
+  Num
+  Int
+  Print
+  Punct
+  Space
+  Word
+  Ref
+  ScalarRef
+  ArrayRef
+  HashRef
+  CodeRef
+  RegexpRef
+  Object
+);
+
 =head1 NAME
 
-Type::Simple - The great new Type::Simple!
+Type::Simple - simple type validation system for Perl
 
 =head1 VERSION
 
@@ -16,38 +48,464 @@ Version 0.01
 
 our $VERSION = '0.01';
 
+*validate = \&apply;
+
+sub apply {
+    my ( $fn, $x ) = @_;
+
+    if ( ref $fn eq 'CODE' ) {
+        return $fn->($x);
+    } elsif ( ref $fn eq 'Regexp' ) {
+        return $x =~ $fn ? 1 : 0;
+    } else {
+        croak "Invalid type check $fn (expected CODE or Regexp)";
+    }
+}
+
+sub AND {
+    my (@fn) = @_;
+    return sub {
+        my ($x) = @_;
+        foreach my $fn (@fn) {
+            return 0 if not apply( $fn, $x );
+        }
+        return 1;
+    };
+}
+
+sub OR {
+    my (@fn) = @_;
+    return sub {
+        my ($x) = @_;
+        foreach my $fn (@fn) {
+            return 1 if apply( $fn, $x );
+        }
+        return 0;
+    };
+}
+
+sub NOT {
+    my ($fn) = @_;
+    return sub {
+        my ($x) = @_;
+        return apply( $fn, $x ) ? 0 : 1;
+    };
+}
+
+sub Any {
+    return sub {1};
+}
+
+sub Bool {
+    return sub {
+        my ($x) = @_;
+
+        return 1 if not defined $x;
+        return 1 if $x eq '';
+        return 1 if $x =~ /^[01]$/;
+
+        return 0;
+    };
+}
+
+sub Defined {
+    return sub {
+        my ($x) = @_;
+        return defined $x ? 1 : 0;
+    };
+}
+
+sub Undef {
+    return NOT( Defined() );
+}
+
+sub Maybe {
+    my ($fn) = @_;
+
+    return OR( Undef(), $fn, );
+}
+
+sub Ref {
+    return AND(
+        Defined(),
+        sub {
+            my ($x) = @_;
+            return ref $x ? 1 : 0;
+        },
+    );
+}
+
+sub Value {    # defined and not reference
+    return AND( Defined(), NOT( Ref() ), );
+}
+
+sub Str {
+    return Value();    # same thing as value?
+}
+
+sub Alpha {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:alpha:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Alnum {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:alnum:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Ascii {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:ascii:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Print {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:print:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Punct {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:punct:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Space {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:space:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Word {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return $x =~ /^[[:word:]]+$/ ? 1 : 0;
+        },
+    );
+}
+
+sub Num {
+    return AND(
+        Str(),
+        sub {
+            my ($x) = @_;
+            return looks_like_number($x) ? 1 : 0;
+        },
+    );
+}
+
+sub Int {
+    return AND(
+        Num(),
+        sub {
+            my ($x) = @_;
+            return 1 if $x =~ /^[0-9]+$/;
+            return 0;
+        },
+    );
+}
+
+sub ScalarRef {
+    return AND(
+        Ref(),
+        sub {
+            my ($x) = @_;
+            return ref $x eq 'SCALAR' ? 1 : 0;
+        },
+    );
+}
+
+sub ArrayRef {
+    my ($fn) = @_;
+
+    return AND(
+        Ref(),
+        sub {
+            my ($x) = @_;
+            return 0 unless ref $x eq 'ARRAY';
+            return 1 unless $fn;
+
+            # check items
+            foreach my $item ( @{$x} ) {
+                return 0 unless apply( $fn, $item );
+            }
+
+            return 1;
+        },
+    );
+}
+
+sub HashRef {
+    my ($fn) = @_;
+
+    return AND(
+        Ref(),
+        sub {
+            my ($x) = @_;
+            return 0 unless ref $x eq 'HASH';
+            return 1 unless $fn;
+
+            # check items
+            foreach my $key ( keys %{$x} ) {
+                return 0 unless apply( $fn, $x->{$key} );
+            }
+
+            return 1;
+        },
+    );
+}
+
+sub CodeRef {
+    return AND(
+        Ref(),
+        sub {
+            my ($x) = @_;
+            return ref $x eq 'CODE' ? 1 : 0;
+        },
+    );
+}
+
+sub RegexpRef {
+    return AND(
+        Ref(),
+        sub {
+            my ($x) = @_;
+            return ref $x eq 'Regexp' ? 1 : 0;
+        },
+    );
+}
+
+sub Object {
+    return AND(
+        Ref(),
+        sub {
+            my ($x) = @_;
+            return blessed $x ? 1 : 0;
+        },
+    );
+}
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+    use Type::Simple qw(:all);
 
-Perhaps a little code snippet.
+    # simple values
+    validate( Int(), 123 );     # -> true
+    validate( Str(), 'xyz' );   # -> false
 
-    use Type::Simple;
+    # compound values
+    validate( ArrayRef(Int()), [ 1, 2, 3 ] );            # -> true
+    validate( HashRef(Bool()), { foo => 1, bar => 0 } ); # -> true
 
-    my $foo = Type::Simple->new();
-    ...
+You can pass your own validation functions as code references:
+
+    my $greater_than_one = sub { $_[0] > 1  };
+    my $less_than_ten    = sub { $_[0] < 10 };
+
+    validate( $greater_than_one, 50 );   # -> true
+    validate( $less_than_ten,    50 );   # -> false
+
+It's possible to combine and modify tests using the boolean functions
+C<Type::Simple::AND()>, C<Type::Simple::OR()> and C<Type::Simple::NOT()>:
+
+    validate(
+        Type::Simple::OR( CodeRef(), RegexpRef() ),
+        $code_or_regexp,
+    );
+
+    validate(
+        Type::Simple::AND(
+            Num(),
+            $greater_than_one,
+            $less_than_ten
+        ),
+        $number
+    );
+
+    validate(
+        Type::Simple::AND(
+            Num(),
+            Type::Simple::NOT(Int()),
+        ),
+        $non_integer_number
+    );
+
+=head1 DESCRIPTION
+
+    Any
+        Bool
+        Maybe
+        Undef
+        Defined
+            Value
+                Str
+                    Alpha
+                    Alnum
+                    Ascii
+                    Num
+                        Int
+                    Print
+                    Punct
+                    Space
+                    Word
+            Ref
+                ScalarRef
+                ArrayRef
+                HashRef
+                CodeRef
+                RegexpRef
+                Object
 
 =head1 EXPORT
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+None by default.
 
-=head1 SUBROUTINES/METHODS
+All the subroutines below can be exported:
 
-=head2 function1
+=head1 SUBROUTINES
 
-=cut
+=head2 validate( type, value)
 
-sub function1 {
-}
+Try to validate a value using a type. Example:
 
-=head2 function2
+    validate( Num(), 123 ); # -> true
+    validate( Num(), 'x' ); # -> false
 
-=cut
+The validation functions are the following:
 
-sub function2 {
-}
+=head2 Any()
+
+Anything.
+
+=head2 Bool()
+
+Perl boolean values: C<1>, C<0>, C<''> and C<undef>.
+
+=head2 Maybe(`a)
+
+Type `a or C<undef>.
+
+=head2 Undef()
+
+C<undef>.
+
+=head2 Defined()
+
+Defined value. (Not C<undef>)
+
+=head2 Value()
+
+Number or string. (Not references)
+
+=head2 Str()
+
+String.
+
+Since numbers can be stringified, it will also accept numbers.
+If you want a non-numeric string, you can use:
+
+    Type::Simple::AND(
+        Str(),
+        Type::Simple::NOT(Num()),
+    );
+
+=head2 Alpha()
+
+A string of alphabetical characters (C<[A-Za-z]>).
+
+=head2 Alnum()
+
+A string of alphanumeric characters (C<[A-Za-z0-9]>)
+
+=head2 Ascii()
+
+A string of characters in the ASCII character set.
+
+=head2 Num()
+
+Looks like a number.
+
+=head2 Int()
+
+An integer.
+
+=head2 Print()
+
+A string of printable characters, including spaces.
+
+=head2 Punct()
+
+A string of non-alphanumeric, non-space characters
+(C<<[-!"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]>>).
+
+=head2 Space()
+
+A string of whitespace characters (equivalent to C<\s>).
+
+=head2 Word()
+
+A string of word characters (C<[A-Za-z0-9_]>, equivalent to C<\w>).
+
+=head2 Ref()
+
+A reference.
+
+=head2 ScalarRef()
+
+A scalar reference.
+
+=head2 ArrayRef(`a)
+
+An array reference.
+
+If you specify `a, the array elements should be of type `a.
+
+=head2 HashRef(`a)
+
+A hash reference.
+
+If you specify `a, the hash values should be of type `a.
+
+=head2 CodeRef()
+
+A code reference.
+
+=head2 RegexpRef()
+
+A regexp reference.
+
+=head2 Object()
+
+A blessed object.
 
 =head1 AUTHOR
 
@@ -55,12 +513,10 @@ Nelson Ferraz, C<< <nferraz at gmail.com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-type-simple at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Type-Simple>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
+Please report any bugs or feature requests to
+L<https://github.com/nferraz/type-simple/issues>.  I will be notified,
+and then you'll automatically be notified of progress on your bug
+as I make changes.
 
 =head1 SUPPORT
 
@@ -68,22 +524,13 @@ You can find documentation for this module with the perldoc command.
 
     perldoc Type::Simple
 
-
 You can also look for information at:
 
 =over 4
 
-=item * RT: CPAN's request tracker (report bugs here)
+=item * GitHub
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Type-Simple>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/Type-Simple>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/Type-Simple>
+L<http://github.com/nferraz/type-simple>
 
 =item * Search CPAN
 
@@ -126,4 +573,4 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 =cut
 
-1; # End of Type::Simple
+1;    # End of Type::Simple
