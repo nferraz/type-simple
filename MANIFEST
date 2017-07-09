@@ -14,6 +14,7 @@ t/04-maybe.t
 t/05-str.t
 t/06-logical.t
 t/07-regex.t
+t/08-subs.t
 t/manifest.t
 t/pod-coverage.t
 t/pod.t
