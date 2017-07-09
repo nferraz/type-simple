@@ -1,17 +1,18 @@
 Type-Simple
+===========
 
 Simple type validation system for Perl.
 
-INSTALLATION
+### INSTALLATION
 
 To install this module, run the following commands:
 
-	perl Makefile.PL
-	make
-	make test
-	make install
+    perl Makefile.PL
+    make
+    make test
+    make install
 
-SUPPORT AND DOCUMENTATION
+### SUPPORT AND DOCUMENTATION
 
 After installing, you can find documentation for this module with the
 perldoc command.
@@ -20,22 +21,21 @@ perldoc command.
 
 You can also look for information at:
 
-       o   GitHub
+   * GitHub
+     http://github.com/nferraz/type-simple
 
-           L<http://github.com/nferraz/type-simple>
+   * Search CPAN
+     http://search.cpan.org/dist/Type-Simple/
 
-       o   Search CPAN
-
-           L<http://search.cpan.org/dist/Type-Simple/>
-
-BUGS
+### BUGS
 
 Please report any bugs or feature requests to
-L<https://github.com/nferraz/type-simple/issues>.  I will be notified,
-and then you'll automatically be notified of progress on your bug as I
-make changes.
+https://github.com/nferraz/type-simple/issues
 
-LICENSE AND COPYRIGHT
+I will be notified, and then you'll automatically be notified of
+progress on your bug as I make changes.
+
+### LICENSE AND COPYRIGHT
 
 Copyright (C) 2017 Nelson Ferraz
 
