@@ -31,6 +31,7 @@ our @EXPORT_OK = qw(
   ScalarRef
   ArrayRef
   HashRef
+  HashRefWith
   CodeRef
   RegexpRef
   Object
@@ -42,11 +43,11 @@ Type::Simple - simple type validation system for Perl
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 *validate = \&apply;
 
@@ -284,6 +285,26 @@ sub HashRef {
     );
 }
 
+sub HashRefWith {
+    my (%params) = @_;
+
+    return AND(
+        HashRef(),
+        sub {
+            my ($x) = @_;
+            foreach my $key (keys %params) {
+                if ($key =~ /^CODE\(0x[0-9a-f]+\)$/) {
+                    croak qq{Key "$key" should be a string, not a CODE reference (did you try to use a validation type as a key?)};
+                }
+                my $fn = $params{$key};
+                return 0 unless apply( $fn, $x->{$key} );
+            }
+
+            return 1;
+        },
+    );
+}
+
 sub CodeRef {
     return AND(
         Ref(),
@@ -322,9 +343,22 @@ sub Object {
     validate( Int(), 123 );     # -> true
     validate( Str(), 'xyz' );   # -> false
 
-    # compound values
+    # array and hash references
     validate( ArrayRef(Int()), [ 1, 2, 3 ] );            # -> true
     validate( HashRef(Bool()), { foo => 1, bar => 0 } ); # -> true
+
+    # hash references with specific keys and value types
+    validate(
+        HashRefWith( foo => Int(), bar => Int() ),
+        { foo => 1 },
+    ); # -> false, because you didn't provide key "bar"
+
+    validate(
+        HashRefWith( foo => Int(), bar => Maybe(Int()) ),
+        { foo => 1 },
+    ); # -> true, because "bar" is Maybe()
+
+Check the test suite for many more examples!
 
 You can pass your own validation functions as code references:
 
@@ -363,7 +397,7 @@ C<Type::Simple::AND()>, C<Type::Simple::OR()> and C<Type::Simple::NOT()>:
 
     Any
         Bool
-        Maybe
+        Maybe(`a)
         Undef
         Defined
             Value
@@ -379,8 +413,9 @@ C<Type::Simple::AND()>, C<Type::Simple::OR()> and C<Type::Simple::NOT()>:
                     Word
             Ref
                 ScalarRef
-                ArrayRef
-                HashRef
+                ArrayRef(`a)
+                HashRef(`a)
+                    HashRefWith( k1 => `a, k2 => `b, ... )
                 CodeRef
                 RegexpRef
                 Object
@@ -493,7 +528,16 @@ If you specify `a, the array elements should be of type `a.
 
 A hash reference.
 
-If you specify `a, the hash values should be of type `a.
+If you specify `a, all values should be of type `a.
+
+=head2 HashRefWith( k1 => `a, k2 => `b, ... )
+
+A hash reference with a given set of keys and value types.
+
+Attention: keys MUST be strings!
+
+    HashRefWith( foo => Int()   );  # good
+    HashRefWith( Str() => Int() );  # bad! Key should be a string, not a CODE reference
 
 =head2 CodeRef()
 
