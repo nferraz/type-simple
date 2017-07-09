@@ -7,29 +7,12 @@ use Test::More 'no_plan';
 
 use Type::Simple qw(
     validate
-    Any
-        Bool
-        Maybe
-        Undef
-        Defined
-            Value
-                Str
-                    Alpha
-                    Alnum
-                    Ascii
-                    Num
-                        Int
-                    Print
-                    Punct
-                    Space
-                    Word
-            Ref
-                ScalarRef
-                ArrayRef
-                HashRef
-                CodeRef
-                RegexpRef
-                Object
+    Str
+    Alpha
+    Num
+    Int
+    ArrayRef
+    HashRef
 );
 
 my @tests = (

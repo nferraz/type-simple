@@ -8,21 +8,10 @@ use Test::More 'no_plan';
 use Type::Simple qw(
     validate
     Any
-        Bool
-        Maybe
-        Undef
-        Defined
-            Value
-                Str
-                    Num
-                        Int
-            Ref
-                ScalarRef
-                ArrayRef
-                HashRef
-                CodeRef
-                RegexpRef
-                Object
+    Str
+    Int
+    ArrayRef
+    HashRef
 );
 
 my @tests = (

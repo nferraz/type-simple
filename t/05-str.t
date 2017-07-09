@@ -6,16 +6,16 @@ use warnings;
 use Test::More 'no_plan';
 
 use Type::Simple qw(
-  validate
-  Str
-  Alpha
-  Alnum
-  Ascii
-  Num
-  Print
-  Punct
-  Space
-  Word
+   validate
+   Str
+   Alpha
+   Alnum
+   Ascii
+   Num
+   Print
+   Punct
+   Space
+   Word
 );
 
 my @tests = (

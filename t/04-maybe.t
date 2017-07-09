@@ -8,21 +8,11 @@ use Test::More 'no_plan';
 use Type::Simple qw(
     validate
     Any
-        Bool
-        Maybe
-        Undef
-        Defined
-            Value
-                Str
-                    Num
-                        Int
-            Ref
-                ScalarRef
-                ArrayRef
-                HashRef
-                CodeRef
-                RegexpRef
-                Object
+    Maybe
+    Str
+    Int
+    ArrayRef
+    HashRef
 );
 
 my @tests = (
@@ -50,6 +40,11 @@ my @tests = (
         value  => [ 1, undef, 2, 'xyz' ],
         isa    => ArrayRef( Maybe( Int() ) ),
         result => 0,
+    },
+    {
+        value  => [ 1, undef, 2, 'xyz' ],
+        isa    => ArrayRef( Maybe( Str() ) ),
+        result => 1,
     },
     {
         value  => { foo => 1, bar => undef },

@@ -8,21 +8,14 @@ use Test::More 'no_plan';
 use Type::Simple qw(
     validate
     Any
-        Bool
-        Maybe
-        Undef
-        Defined
-            Value
-                Str
-                    Num
-                        Int
-            Ref
-                ScalarRef
-                ArrayRef
-                HashRef
-                CodeRef
-                RegexpRef
-                Object
+    Int
+    Ref
+    ScalarRef
+    ArrayRef
+    HashRef
+    CodeRef
+    RegexpRef
+    Object
 );
 
 my @tests = (
@@ -39,6 +32,11 @@ my @tests = (
     {
         value  => \123,
         type   => ScalarRef(),
+        result => 1,
+    },
+    {
+        value  => [ 1, 2, 3 ],
+        type   => ArrayRef(),
         result => 1,
     },
     {
