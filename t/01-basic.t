@@ -123,7 +123,7 @@ foreach my $test (@tests) {
     is( validate( Str(),   $value ), $isa->{Str},   'Str' );
 
     is( !!validate( Defined(), $value ), !!( defined($value) ),     'Defined' );
-    is( !!validate( Undef(),   $value ), !!( not defined($value) ), 'Defined' );
+    is( !!validate( Undef(),   $value ), !!( not defined($value) ), 'Undef' );
 
     is( !!validate( Num(), $value ), !!looks_like_number($value), 'Num' );
     is( !!validate( Int(), $value ), !!( looks_like_number($value) and int($value) == $value ), 'Int' );
