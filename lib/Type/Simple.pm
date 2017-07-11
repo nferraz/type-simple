@@ -292,9 +292,10 @@ sub HashRefWith {
         HashRef(),
         sub {
             my ($x) = @_;
-            foreach my $key (keys %params) {
-                if ($key =~ /^CODE\(0x[0-9a-f]+\)$/) {
-                    croak qq{Key "$key" should be a string, not a CODE reference (did you try to use a validation type as a key?)};
+            foreach my $key ( keys %params ) {
+                if ( $key =~ /^CODE\(0x[0-9a-f]+\)$/ ) {
+                    croak
+                      qq{Key "$key" should be a string, not a CODE reference (did you try to use a validation type as a key?)};
                 }
                 my $fn = $params{$key};
                 return 0 unless apply( $fn, $x->{$key} );
